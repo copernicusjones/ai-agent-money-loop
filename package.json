@@ -2,10 +2,10 @@
   "name": "ai-agent-money-loop",
   "version": "0.1.0",
   "description": "x402-ready monetization server for autonomous AI agents",
-  "main": "server.ts",
+  "main": "server.js",
   "scripts": {
-    "start": "bun run server.ts",
-    "client": "bun run example-client.ts"
+    "start": "node server.js",
+    "client": "node client.js"
   },
   "dependencies": {},
   "devDependencies": {}
