@@ -1,38 +1,52 @@
-const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3000';
+require('dotenv').config();
+const { x402Client, wrapFetchWithPayment } = require('@x402/fetch');
+const { registerExactSvmScheme } = require('@x402/svm/exact/client');
+const { generateKeyPairSigner, createKeyPairSignerFromBytes } = require('@solana/kit');
+const { base58 } = require('@scure/base');
 
-const argv = process.argv.slice(2);
-const endpoint = argv.includes('--endpoint') ? argv[argv.indexOf('--endpoint') + 1] : '/v1/research';
-const query = argv.includes('--query') ? argv[argv.indexOf('--query') + 1] : 'AI agents 2026';
-const shouldPay = argv.includes('--pay');
+const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3000';
+const NETWORK = process.env.NETWORK || 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1';
+const PAYER_SECRET = process.env.SOLANA_PRIVATE_KEY || '';
 
 async function main() {
-  const url = `${SERVER_URL}${endpoint}?topic=${encodeURIComponent(query)}`;
-  console.log(`\n🔍 Calling: ${url}`);
-
-  const res1 = await fetch(url);
-  if (res1.status === 402) {
-    const body = await res1.json();
-    console.log(`\n💳 Payment required: ${body.payment?.maxAmountRequired || '?'} units`);
-    console.log(`   Resource: ${body.payment?.resource}`);
-    console.log(`   Network: ${body.payment?.network}`);
-    if (!shouldPay) {
-      console.log('\n⚠️  Skipping payment (use --pay to simulate payment)');
-      console.log(JSON.stringify(body, null, 2));
-      return;
-    }
-    const res2 = await fetch(url, { headers: { 'PAYMENT-SIGNATURE': 'simulated-signature' } });
-    const body2 = await res2.json();
-    console.log('\n✅ Response after simulated payment:');
-    console.log(JSON.stringify(body2, null, 2));
-    return;
+  let signer;
+  if (PAYER_SECRET) {
+    signer = await createKeyPairSignerFromBytes(base58.decode(PAYER_SECRET));
+  } else {
+    const ephemeral = await generateKeyPairSigner();
+    signer = ephemeral;
+    console.log('No SOLANA_PRIVATE_KEY set; using an ephemeral signer. This will only succeed if that wallet is funded.');
   }
 
-  const body = await res1.json();
-  console.log('\n✅ Response:');
-  console.log(JSON.stringify(body, null, 2));
+  const client = new x402Client();
+  registerExactSvmScheme(client, {
+    signer,
+    networks: [NETWORK],
+  });
+
+  const fetchWithPayment = wrapFetchWithPayment(fetch, client);
+
+  const endpoints = [
+    ['/v1/research', 'AI agents'],
+    ['/v1/leads', 'lead generation'],
+    ['/v1/content', 'money loops'],
+  ];
+
+  for (const [endpoint, topic] of endpoints) {
+    const url = `${SERVER_URL}${endpoint}?${endpoint === '/v1/leads' ? 'query' : 'topic'}=${encodeURIComponent(topic)}`;
+    console.log(`\n→ Requesting ${url}`);
+    try {
+      const response = await fetchWithPayment(url, { method: 'GET' });
+      const body = await response.json();
+      console.log(`HTTP ${response.status}`);
+      console.log(JSON.stringify(body, null, 2));
+    } catch (err) {
+      console.error(`Failed calling ${endpoint}:`, err.message || err);
+    }
+  }
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

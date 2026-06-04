@@ -7,6 +7,26 @@
     "start": "node server.js",
     "client": "node client.js"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/copernicusjones/ai-agent-money-loop.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/copernicusjones/ai-agent-money-loop/issues"
+  },
+  "homepage": "https://github.com/copernicusjones/ai-agent-money-loop#readme",
+  "dependencies": {
+    "@scure/base": "^2.2.0",
+    "@solana/kit": "^5.5.1",
+    "@x402/core": "^2.14.0",
+    "@x402/express": "^2.14.0",
+    "@x402/fetch": "^2.14.0",
+    "@x402/svm": "^2.14.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  }
 }
